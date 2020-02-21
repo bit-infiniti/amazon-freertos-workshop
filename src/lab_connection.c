@@ -34,9 +34,11 @@
 #include "aws_demo.h"
 #include "types/iot_network_types.h"
 #include "esp_log.h"
-
+#include "iot_network_manager_private.h"
+#include "iot_init.h"
 #include "lab_config.h"
 #include "lab_connection.h"
+#include "lab_network_manager.h"
 
 #include "m5stickc.h"
 
@@ -98,6 +100,8 @@ static const char *TAG = "lab_connection";
  */
 #define LWT_MESSAGE_LENGTH ((size_t)(sizeof(LWT_MESSAGE) - 1))
 
+
+
 /*-----------------------------------------------------------*/
 
 /* Semaphore for connection readiness */
@@ -117,6 +121,7 @@ static iot_connection_params_t *_pConnectionParams = NULL;
 /* boolean flag for connection established */
 static bool connectionEstablished = false;
 
+
 /*-----------------------------------------------------------*/
 
 /**
@@ -133,7 +138,6 @@ static int _initialize(void)
 
     /* Flags to track cleanup on error. */
     bool mqttInitialized = false;
-
     /* Initialize the MQTT library. */
     mqttInitStatus = IotMqtt_Init();
 
@@ -182,6 +186,7 @@ static void _cleanup(void)
 }
 
 /*-----------------------------------------------------------*/
+
 
 /**
  * @brief Set the Shadow callback functions used in this demo.
@@ -402,6 +407,12 @@ int lab_run(bool awsIotMqttMode,
             void *pNetworkCredentialInfo,
             const IotNetworkInterface_t *pNetworkInterface)
 {
+    static labContext_t labContext =
+    {
+        .networkConnectedCallback = NULL, // _networkConnectedCallback,
+        .networkDisconnectedCallback = NULL //_networkDisconnectedCallback
+    };
+
     /* Return value of this function and the exit status of this program. */
     int status = EXIT_SUCCESS;
 
@@ -437,6 +448,12 @@ int lab_run(bool awsIotMqttMode,
     {
         /* Initialize the libraries required for this demo. */
         status = _initialize();
+    }
+
+    if (status == EXIT_SUCCESS)
+    {
+        /* Initialize the network. */
+        status = network_initialize(&labContext);
     }
 
     if (status == EXIT_SUCCESS)
